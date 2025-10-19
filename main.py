@@ -106,9 +106,9 @@ def main():
             return
         
         user_id_query = st.text_input("User ID", value=st.session_state.random_user_id, key="user_query")
-        top_k = st.slider("Number of top matches to retrieve", min_value=1, max_value=20, value=10)
+        top_k = st.slider("Number of top matches to retrieve", min_value=1, max_value=10, value=3)
         
-        if st.button("🔍 Find Matches", type="primary"):
+        if st.button("Find Matches", type="primary"):
             progress_bar = st.progress(0)
             status_text = st.empty()
             
@@ -143,7 +143,7 @@ def main():
             for idx, match in enumerate(st.session_state.matches, 1):
                         with st.expander(f"#{idx} - Job ID: {match['job_id']} (Score: {match['similarity_score']:.3f})"):
                             st.markdown("**Job Description:**")
-                            st.write(match["description"][:500] + "..." if len(match["description"]) > 500 else match["description"])
+                            st.write(match["description"])
                             
                             st.markdown("**🤖 AI Reasoning:**")
                             st.info(match["reasoning"])

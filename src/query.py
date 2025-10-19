@@ -32,7 +32,7 @@ class QuerySubsystem:
         jobs_emb = np.array(job_embeddings)
         return cosine_similarity(resume_emb, jobs_emb)[0]
     
-    def get_top_matches(self, user_id: str = "default_user", top_k: int = 10, progress_callback=None) -> List[Dict]:
+    def get_top_matches(self, user_id: str = "default_user", top_k: int = 3, progress_callback=None) -> List[Dict]:
         """Find top K job matches for a resume."""
         if progress_callback:
             progress_callback("Fetching resume...", 0.1)
