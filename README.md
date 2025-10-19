@@ -111,15 +111,11 @@ Enable these Google Cloud APIs in your project:
 
 ```bash
 # Set environment variables
-export GCP_PROJECT_ID="your-project-id"
-export GCP_LOCATION="us-central1"
-export PORT=8501  # Optional, defaults to 8501
+export PORT=8501  # Optional, defaults to 8501. Might be useful for cloud deployment.
 
 # Place your credentials.json in the project root
 docker compose up -d
 ```
-
-Access the application at http://localhost:8501 (or your configured PORT)
 
 #### Option B: Local Python
 
@@ -128,6 +124,7 @@ streamlit run main.py
 ```
 
 ## Usage
+Access the application at http://localhost:8501 (or your configured PORT)
 
 ### 1. Ingestion Tab
 
