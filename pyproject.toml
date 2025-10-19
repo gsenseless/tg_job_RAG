@@ -1,0 +1,16 @@
+[project]
+name = "tgjobrag"
+version = "0.1.0"
+description = "Job-Resume RAG matching system with Vertex AI"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "streamlit>=1.28.0",
+    "pandas>=2.0.0",
+    "pdfplumber>=0.10.0",
+    "google-cloud-aiplatform>=1.38.0",
+    "numpy>=1.24.0",
+    "scikit-learn>=1.3.0",
+    "plotly>=5.17.0",
+    "google-cloud-firestore>=2.13.0",
+]
