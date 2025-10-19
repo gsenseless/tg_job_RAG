@@ -1,6 +1,9 @@
 # Job-Resume RAG Matching System
 
-AI-powered job matching system that uses Vertex AI embeddings and LLM reasoning to match resumes with job vacancies.
+A large number of job vacancies are posted in various Telegram channels, often aimed at a wide audience. As a result, 90% of these listings are typically not relevant to a specific job seeker, because most people have a unique skill set and background. 
+
+**This project is designed to solve that problem.**  
+With Job-Resume RAG Matching System, we use Retrieval Augmented Generation (RAG) approaches to intelligently match job postings with user resumes, surfacing only the most relevant opportunities based on each individual’s skills and experiences. This helps job seekers avoid wasting time on irrelevant listings and increases the chances of finding suitable positions faster.
 
 ## System Architecture
 
@@ -29,6 +32,25 @@ AI-powered job matching system that uses Vertex AI embeddings and LLM reasoning 
      │  - Resume│
      │  - Logs  │
      └──────────┘
+
+## How it works?
+
+1. **Ingestion:**  
+   - The user's resume and a JSON containing job vacancies are uploaded into the system.
+   - Both the resume and each job posting are converted into embeddings (vector representations) using Vertex AI models.
+   - These embeddings, along with the original text data, are stored in Google Firestore.
+
+2. **Matching:**  
+   - When a match is requested, the system computes vector similarities between the resume’s embedding and all job vacancy embeddings in Firestore.
+   - The top matches (most relevant job postings) are retrieved based on these similarity scores.
+
+3. **Augmented Generation:**  
+   - For each top-matched job posting, a prompt is constructed combining the user's skills, experience, and the job description.
+   - Vertex AI’s Gemini LLM generates a tailored summary or explanation for why this job is a good match for the candidate, helping the applicant quickly understand their fit.
+
+_In summary: The system ingests data, finds top matches using vector search, and augments results with contextual AI-generated insights for personalized job recommendations._
+
+
 ```
 
 ## Setup
@@ -114,6 +136,7 @@ streamlit run main.py
 
 **Upload Job Vacancies:**
 - Upload JSON file with job vacancies (Telegram export format)
+https://telegram.org/blog/export-and-more
 
 ### 2. Query & Match Tab
 
@@ -143,12 +166,13 @@ View 6 interactive charts.
 
 ## Technology Stack
 
-- **UI**: Streamlit
-- **Embeddings**: Vertex AI Text Embedding
-- **Database**: Google Cloud Firestore
+- **User Interface**: Streamlit
+- **Embeddings and LLM**: Vertex AI Text Embedding and Gemini LLM.
+- **Database (knowledge base)**: Google Cloud Firestore
 - **PDF Processing**: pdfplumber
 - **Similarity**: scikit-learn cosine similarity
-- **Visualization**: Plotly
+- **Visualization, Dashboard**: Plotly, Streamlit
+- **Containerization**: docker-compose
 
 *Note that processing is quite slow due to LLM quotas limits.
 
