@@ -1,8 +1,8 @@
 import streamlit as st
-from tg_export_parser import load_job_vacancies
-from ingestion import IngestionSubsystem
-from query import QuerySubsystem
-from monitoring import MonitoringSubsystem
+from src.tg_export_parser import load_job_vacancies
+from src.ingestion import IngestionSubsystem
+from src.query import QuerySubsystem
+from src.monitoring import MonitoringSubsystem
 import os
 import random
 
