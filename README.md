@@ -137,8 +137,9 @@ https://telegram.org/blog/export-and-more
 
 ### 2. Query & Match Tab
 
-- Select number of top matches 
-- Review AI-generated match explanations
+- Select number of top matches
+- Adjust prompt
+- Review AI-generated reasoning
 - Provide feedback on each match
 
 ### 3. Dashboard Tab

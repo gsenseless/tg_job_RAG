@@ -32,7 +32,7 @@ class QuerySubsystem:
         jobs_emb = np.array(job_embeddings)
         return cosine_similarity(resume_emb, jobs_emb)[0]
     
-    def get_top_matches(self, user_id: str = "default_user", top_k: int = 3, progress_callback=None) -> List[Dict]:
+    def get_top_matches(self, user_id: str = "default_user", top_k: int = 3, prompt: str = None, progress_callback=None) -> List[Dict]:
         """Find top K job matches for a resume."""
         if progress_callback:
             progress_callback("Fetching resume...", 0.1)
@@ -67,21 +67,22 @@ class QuerySubsystem:
             if progress_callback:
                 progress_pct = 0.6 + (0.4 * (idx + 1) / len(top_jobs))
                 progress_callback(f"Generating insight {idx + 1}/{len(top_jobs)}...", progress_pct)
-            job["reasoning"] = self.generate_reasoning(resume_text, job["description"])
+            job["reasoning"] = self.generate_reasoning(resume_text, job["description"], prompt)
         
         return top_jobs
     
-    def generate_reasoning(self, resume_text: str, job_description: str) -> str:
-        """Use LLM to explain why resume is suitable for the job."""
-        prompt = f"""List matching skills. And list skills which candidate might lack for this job (if any). 
-
+    def generate_reasoning(self, resume_text: str, job_description: str, custom_prompt: str = None) -> str:
+        if custom_prompt is None:
+            custom_prompt = "List skills which candidate might lack for this job (if any). And list matching skills."
+        
+        prompt = f"""{custom_prompt}
 Resume:
-{resume_text[:2000]}
+{resume_text[:3000]}
 
 Job Description:
-{job_description[:1000]}
+{job_description[:3000]}
 
-Provide a concise explanation (2-3 sentences) of why this candidate is a good match for this position."""
+"""
         
         response = self.llm.generate_content(prompt)
         return response.text

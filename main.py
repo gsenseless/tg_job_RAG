@@ -38,61 +38,55 @@ def main():
             resume_file = st.file_uploader("Choose your resume", type=["pdf"], key="resume")
             user_id = st.text_input("User ID (optional)", value=st.session_state.random_user_id)
             
-            if st.button("Process Resume", type="primary"):
-                if resume_file:
-                    with st.spinner("Extracting text and generating embeddings..."):
-                        try:
-                            result = st.session_state.ingestion.ingest_resume(resume_file, user_id)
-                            st.success(f" Resume processed! Text length: {result['text_length']} chars")
-                            st.session_state.resume_uploaded = True
-                            if st.session_state.get("jobs_uploaded"):
-                                st.info(" Both ingestion steps complete! Go to the **Query & Match** tab to find matching jobs.")
-                        except Exception as e:
-                            st.error(f"Error: {e}")
-                else:
-                    st.warning("Please upload a resume file")
+            if resume_file:
+                with st.spinner("Extracting text and generating embeddings..."):
+                    try:
+                        result = st.session_state.ingestion.ingest_resume(resume_file, user_id)
+                        st.success(f" Resume processed! Text length: {result['text_length']} chars")
+                        st.session_state.resume_uploaded = True
+                        if st.session_state.get("jobs_uploaded"):
+                            st.info(" Both ingestion steps complete! Go to the **Query & Match** tab to find matching jobs.")
+                    except Exception as e:
+                        st.error(f"Error: {e}")
         
         with col2:
             st.subheader("Upload Job Vacancies (JSON)")
             jobs_file = st.file_uploader("Choose job vacancies file", type=["json"], key="jobs")
             
-            if st.button("Process Job Vacancies", type="primary"):
-                if jobs_file:
-                    with st.spinner("Loading and processing job vacancies..."):
+            if jobs_file:
+                with st.spinner("Loading and processing job vacancies..."):
+                    try:
+                        jobs_df = load_job_vacancies(jobs_file)
+                        st.info(f"Loaded {len(jobs_df)} job vacancies")
+                        
+                        # Convert DataFrame to list of dicts
+                        jobs_list = jobs_df.to_dict('records')
+                        st.info(f"Starting batch processing of {len(jobs_list)} jobs...")
+                        
+                        progress_bar = st.progress(0)
+                        status_text = st.empty()
+                        
+                        def update_progress(current, total):
+                            status_text.text(f"Processing jobs {current}/{total} ...")
+                            progress_bar.progress(current / total)
+                        
                         try:
-                            jobs_df = load_job_vacancies(jobs_file)
-                            st.info(f"Loaded {len(jobs_df)} job vacancies")
-                            
-                            # Convert DataFrame to list of dicts
-                            jobs_list = jobs_df.to_dict('records')
-                            st.info(f"Starting batch processing of {len(jobs_list)} jobs...")
-                            
-                            progress_bar = st.progress(0)
-                            status_text = st.empty()
-                            
-                            def update_progress(current, total):
-                                status_text.text(f"Processing jobs {current}/{total} (batches of 250)...")
-                                progress_bar.progress(current / total)
-                            
-                            try:
-                                results = st.session_state.ingestion.ingest_jobs_batch(
-                                    jobs_list, 
-                                    progress_callback=update_progress
-                                )
-                            except Exception as batch_error:
-                                st.error(f"Batch processing error: {batch_error}")
-                                raise
-                            
-                            status_text.empty()
-                            progress_bar.empty()
-                            st.success(f" Processed {len(results)} job vacancies!")
-                            st.session_state.jobs_uploaded = True
-                            if st.session_state.get("resume_uploaded"):
-                                st.info(" Both ingestion steps complete! Go to the **Query & Match** tab to find matching jobs.")
-                        except Exception as e:
-                            st.error(f"Error: {e}")
-                else:
-                    st.warning("Please upload a job vacancies file")
+                            results = st.session_state.ingestion.ingest_jobs_batch(
+                                jobs_list, 
+                                progress_callback=update_progress
+                            )
+                        except Exception as batch_error:
+                            st.error(f"Batch processing error: {batch_error}")
+                            raise
+                        
+                        status_text.empty()
+                        progress_bar.empty()
+                        st.success(f" Processed {len(results)} job vacancies!")
+                        st.session_state.jobs_uploaded = True
+                        if st.session_state.get("resume_uploaded"):
+                            st.info(" Both ingestion steps complete! Go to the **Query & Match** tab to find matching jobs.")
+                    except Exception as e:
+                        st.error(f"Error: {e}")
     
     with tab2:
         st.header("2. Find Job Matches")
@@ -105,8 +99,13 @@ def main():
             st.warning("⚠️ Please upload and process job vacancies first in the Ingestion tab")
             return
         
-        user_id_query = st.text_input("User ID", value=st.session_state.random_user_id, key="user_query")
         top_k = st.slider("Number of top matches to retrieve", min_value=1, max_value=10, value=3)
+        prompt_query = st.text_area(
+            "AI Reasoning Prompt", 
+            value="List skills which candidate might lack for this job (if any). And list matching skills. Be concise.",
+            height=100,
+            help="Customize the prompt for AI-generated job matching insights"
+        )
         
         if st.button("Find Matches", type="primary"):
             progress_bar = st.progress(0)
@@ -118,8 +117,9 @@ def main():
             
             try:
                 matches = st.session_state.query.get_top_matches(
-                    user_id_query, 
+                    st.session_state.random_user_id, 
                     top_k,
+                    prompt_query,
                     progress_callback=update_progress
                 )
                 
@@ -128,7 +128,7 @@ def main():
                 
                 if matches:
                     avg_sim = sum(m["similarity_score"] for m in matches) / len(matches)
-                    st.session_state.monitoring.log_query(user_id_query, len(matches), avg_sim)
+                    st.session_state.monitoring.log_query(st.session_state.random_user_id, len(matches), avg_sim)
                     st.session_state.matches = matches
                     st.success(f"Found {len(matches)} matching jobs!")
                 else:
@@ -143,7 +143,13 @@ def main():
             for idx, match in enumerate(st.session_state.matches, 1):
                         with st.expander(f"#{idx} - Job ID: {match['job_id']} (Score: {match['similarity_score']:.3f})"):
                             st.markdown("**Job Description:**")
-                            st.write(match["description"])
+                            st.text_area(
+                                "Full Description", 
+                                value=match["description"], 
+                                height=400, 
+                                key=f"desc_{idx}",
+                                disabled=True
+                            )
                             
                             st.markdown("**🤖 AI Reasoning:**")
                             st.info(match["reasoning"])
@@ -153,13 +159,13 @@ def main():
                             with col1:
                                 if st.button("👍 Like", key=f"like_{idx}"):
                                     st.session_state.monitoring.log_feedback(
-                                        user_id_query, match["job_id"], True
+                                        st.session_state.random_user_id, match["job_id"], True
                                     )
                                     st.success("Liked!")
                             with col2:
                                 if st.button("👎 Dislike", key=f"dislike_{idx}"):
                                     st.session_state.monitoring.log_feedback(
-                                        user_id_query, match["job_id"], False
+                                        st.session_state.random_user_id, match["job_id"], False
                                     )
                                     st.success("Feedback recorded!")
     

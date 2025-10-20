@@ -76,7 +76,7 @@ class IngestionSubsystem:
     
     def ingest_jobs_batch(self, jobs_data: List[Dict], progress_callback=None) -> List[Dict]:
         """Process jobs in batches of up to 100 (Firestore limit is 500, but smaller is safer)."""
-        BATCH_SIZE = 10
+        BATCH_SIZE = 30
         all_results = []
         
         # Prepare valid jobs
