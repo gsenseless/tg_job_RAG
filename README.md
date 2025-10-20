@@ -53,7 +53,17 @@ _In summary: The system ingests data, finds top matches using vector search, and
 
 ```
 
+
+## Cloud deployment
+
+The app is deployed on Google Cloud Run and available here:  
+https://tg-rag-service-119968899763.us-central1.run.app/
+> **Note:** _It's a bit slow (be patient). It runs faster locally._
+
+You can also install and run it locally as described below:
+
 ## Setup
+
 
 ### 1. Install Dependencies
 
