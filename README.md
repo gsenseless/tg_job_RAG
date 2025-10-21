@@ -33,6 +33,8 @@ With Job-Resume RAG Matching System, we use Retrieval Augmented Generation (RAG)
      │  - Logs  │
      └──────────┘
 
+
+```
 ## How it works?
 
 1. **Ingestion:**  
@@ -49,10 +51,6 @@ With Job-Resume RAG Matching System, we use Retrieval Augmented Generation (RAG)
    - Vertex AI’s Gemini LLM generates a tailored summary or explanation for why this job is a good match for the candidate, helping the applicant quickly understand their fit.
 
 _In summary: The system ingests data, finds top matches using vector search, and augments results with contextual AI-generated insights for personalized job recommendations._
-
-
-```
-
 
 ## Cloud deployment
 
@@ -171,6 +169,9 @@ View 6 interactive charts.
   ]
 }
 ```
+If you don't have access to the Telegram Desktop App, you can download an example JSON file here:  
+[Example Job Vacancies JSON](https://drive.google.com/file/d/1FANJ3YrOdOgKyYdsZM8TgV5fmGpkr4VZ/view?usp=drive_link)
+
 
 ## Technology Stack
 
