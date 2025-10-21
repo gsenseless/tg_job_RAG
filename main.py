@@ -91,14 +91,6 @@ def main():
     with tab2:
         st.header("2. Find Job Matches")
         
-        if not st.session_state.get("resume_uploaded"):
-            st.warning("⚠️ Please upload and process a resume first in the Ingestion tab")
-            return
-        
-        if not st.session_state.get("jobs_uploaded"):
-            st.warning("⚠️ Please upload and process job vacancies first in the Ingestion tab")
-            return
-        
         top_k = st.slider("Number of top matches to retrieve", min_value=1, max_value=10, value=3)
         prompt_query = st.text_area(
             "AI Reasoning Prompt", 
@@ -106,6 +98,14 @@ def main():
             height=100,
             help="Customize the prompt for AI-generated job matching insights"
         )
+        
+        if not st.session_state.get("resume_uploaded"):
+            st.warning("⚠️ Please upload and process a resume first in the Ingestion tab")
+            return
+        
+        if not st.session_state.get("jobs_uploaded"):
+            st.warning("⚠️ Please upload and process job vacancies first in the Ingestion tab")
+            return
         
         if st.button("Find Matches", type="primary"):
             progress_bar = st.progress(0)
