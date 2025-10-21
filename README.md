@@ -171,6 +171,9 @@ View 6 interactive charts.
   ]
 }
 ```
+If you don't have access to the Telegram Desktop App, you can download an example JSON file here:  
+[Example Job Vacancies JSON](https://drive.google.com/file/d/1FANJ3YrOdOgKyYdsZM8TgV5fmGpkr4VZ/view?usp=drive_link)
+
 
 ## Technology Stack
 
