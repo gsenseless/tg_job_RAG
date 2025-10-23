@@ -26,12 +26,12 @@ With Job-Resume RAG Matching System, we use Retrieval Augmented Generation (RAG)
 │   - Gemini LLM   │
 └─────────┬────────┘
           │
-     ┌────▼─────┐
-     │Firestore │
-     │  - Jobs  │
-     │  - Resume│
-     │  - Logs  │
-     └──────────┘
+     ┌────▼──────────┐
+     │  Firestore    │
+     │  - Vacancies  │
+     │  - Resumes    │
+     │  - Logs       │
+     └───────────────┘
 
 
 ```
@@ -113,7 +113,24 @@ Enable these Google Cloud APIs in your project:
 3. **Cloud Storage API** (optional, but recommended):
    enable via [Console](https://console.cloud.google.com/apis/library/storage.googleapis.com)
 
-### 4. Run the Application
+### 4. Create Vector Index for Firestore
+
+Create a vector index for the `vacancies` collection to enable efficient vector search:
+
+```bash
+
+gcloud firestore indexes composite create \
+   --project=YOUR_PROJECT_ID \ 
+   --database="ragdb" \
+   --collection-group=vacancies \
+   --query-scope=COLLECTION \
+   --field-config=order=ASCENDING,field-path=session_id --field-config=vector-config='{"dimension":"768","flat": "{}"}',field-path=embedding
+```
+Replace `YOUR_PROJECT_ID` with your actual Google Cloud project ID.
+
+**Note:** Index creation can take several minutes. You can check the status in the [Firestore Console](https://console.cloud.google.com/firestore/indexes).
+
+### 5. Run the Application
 
 #### Option A: Docker
 
@@ -176,11 +193,12 @@ If you don't have access to the Telegram Desktop App, you can download an exampl
 ## Technology Stack
 
 - **User Interface**: Streamlit
-- **Embeddings and LLM**: Vertex AI Text Embedding and Gemini LLM.
-- **Database (knowledge base)**: Google Cloud Firestore
+- **Embeddings**: Vertex AI Text Embedding (768 dimensions)
+- **LLM**: Vertex AI Gemini 2.5 Flash
+- **Database (knowledge base)**: Google Cloud Firestore with native vector search
+- **Vector Search**: Firestore vector index with cosine similarity
 - **PDF Processing**: pdfplumber
-- **Similarity**: scikit-learn cosine similarity
-- **Visualization, Dashboard**: Plotly, Streamlit
+- **Visualization, Dashboard**: Plotly
 - **Containerization**: docker-compose
 
 *Note that processing is quite slow due to LLM quotas limits.

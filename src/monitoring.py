@@ -162,33 +162,28 @@ class MonitoringSubsystem:
             )
             st.plotly_chart(fig3, use_container_width=True)
             
-            st.subheader("👤 Most Active Users (Feedback)")
-            user_feedback = feedback_df.groupby('user_id').agg({
-                'liked': ['sum', 'count']
-            }).reset_index()
-            user_feedback.columns = ['user_id', 'likes', 'total']
-            user_feedback['dislikes'] = user_feedback['total'] - user_feedback['likes']
-            user_feedback = user_feedback.sort_values('total', ascending=False).head(10)
+            st.subheader("📦 Processed Jobs Over Time")
+            jobs_daily = feedback_df.copy()
+            jobs_daily['date'] = jobs_daily['timestamp'].dt.date
+            
+            processed_jobs = jobs_daily.groupby('date').size().reset_index(name='count')
             
             fig4 = go.Figure()
-            fig4.add_trace(go.Bar(
-                name='Likes',
-                x=user_feedback['user_id'],
-                y=user_feedback['likes'],
-                marker_color='#28a745'
-            ))
-            fig4.add_trace(go.Bar(
-                name='Dislikes',
-                x=user_feedback['user_id'],
-                y=user_feedback['dislikes'],
-                marker_color='#dc3545'
+            fig4.add_trace(go.Scatter(
+                x=processed_jobs['date'],
+                y=processed_jobs['count'],
+                mode='lines+markers',
+                fill='tozeroy',
+                line=dict(color='#17a2b8', width=3),
+                marker=dict(size=8),
+                name='Jobs Processed'
             ))
             fig4.update_layout(
-                title="Top 10 Users by Feedback Volume",
-                xaxis_title="User ID",
-                yaxis_title="Count",
-                barmode='stack',
-                height=400
+                title="Daily Processed Jobs Count",
+                xaxis_title="Date",
+                yaxis_title="Number of Jobs",
+                height=400,
+                hovermode='x unified'
             )
             st.plotly_chart(fig4, use_container_width=True)
         else:

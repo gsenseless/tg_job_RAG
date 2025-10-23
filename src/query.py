@@ -1,9 +1,10 @@
 from google.cloud import firestore
 from google.cloud import aiplatform
+from google.cloud.firestore_v1.base_vector_query import DistanceMeasure
+from google.cloud.firestore_v1.vector import Vector
 from vertexai.generative_models import GenerativeModel
-import numpy as np
-from sklearn.metrics.pairwise import cosine_similarity
-from typing import List, Dict, Tuple
+from vertexai.language_models import TextEmbeddingModel
+from typing import List, Dict
 
 
 class QuerySubsystem:
@@ -13,53 +14,38 @@ class QuerySubsystem:
         aiplatform.init(project=project_id, location=location)
         self.db = firestore.Client(project=project_id, database='ragdb')
         self.llm = GenerativeModel("gemini-2.5-flash")
+        self.embedding_model = TextEmbeddingModel.from_pretrained("text-embedding-005")
         
-    def get_resume(self, user_id: str = "default_user") -> Dict:
-        """Retrieve resume from Firestore."""
-        doc = self.db.collection("resumes").document(user_id).get()
-        if not doc.exists:
-            raise ValueError(f"Resume not found for user {user_id}")
-        return doc.to_dict()
-    
-    def get_all_jobs(self) -> List[Dict]:
-        """Retrieve all job vacancies from Firestore."""
-        docs = self.db.collection("jobs").stream()
-        return [doc.to_dict() for doc in docs]
-    
-    def compute_similarities(self, resume_embedding: List[float], job_embeddings: List[List[float]]) -> np.ndarray:
-        """Compute cosine similarity between resume and job embeddings."""
-        resume_emb = np.array(resume_embedding).reshape(1, -1)
-        jobs_emb = np.array(job_embeddings)
-        return cosine_similarity(resume_emb, jobs_emb)[0]
-    
-    def get_top_matches(self, user_id: str = "default_user", top_k: int = 3, prompt: str = None, progress_callback=None) -> List[Dict]:
-        """Find top K job matches for a resume."""
+    def get_top_matches(self, resume_text: str, session_id: str = None, top_k: int = 3, prompt: str = None, progress_callback=None) -> List[Dict]:
+        """Find top K job matches for a resume using Firestore vector search."""
         if progress_callback:
-            progress_callback("Fetching resume...", 0.1)
+            progress_callback("Generating resume embeddings...", 0.1)
         
-        resume = self.get_resume(user_id)
-        resume_embedding = resume["embedding"]
-        resume_text = resume["text"]
+        embeddings = self.embedding_model.get_embeddings([resume_text])
+        resume_embedding = embeddings[0].values
         
         if progress_callback:
-            progress_callback("Fetching job vacancies...", 0.2)
+            progress_callback(f"Searching for top {top_k} job matches...", 0.4)
         
-        jobs = self.get_all_jobs()
-        if not jobs:
-            return []
+        query = self.db.collection("vacancies")
+        if session_id:
+            query = query.where("session_id", "==", session_id)
         
-        if progress_callback:
-            progress_callback(f"Computing similarities for {len(jobs)} jobs...", 0.4)
+        vector_query = query.find_nearest(
+            vector_field="embedding",
+            query_vector=Vector(resume_embedding),
+            distance_measure=DistanceMeasure.COSINE,
+            limit=top_k,
+            distance_result_field="vector_distance"
+        )
         
-        job_embeddings = [job["embedding"] for job in jobs]
-        similarities = self.compute_similarities(resume_embedding, job_embeddings)
+        docs = vector_query.stream()
+        top_jobs = [doc.to_dict() for doc in docs]
+        print(f"Retrieved {len(top_jobs)} documents from vector search")
         
-        for idx, job in enumerate(jobs):
-            job["similarity_score"] = float(similarities[idx])
-        
-        jobs_sorted = sorted(jobs, key=lambda x: x["similarity_score"], reverse=True)
-        top_jobs = jobs_sorted[:top_k]
-        
+        if not top_jobs:
+            print(f"No jobs found.")
+            
         if progress_callback:
             progress_callback(f"Generating AI insights for top {top_k} matches...", 0.6)
         
@@ -86,3 +72,25 @@ Job Description:
         
         response = self.llm.generate_content(prompt)
         return response.text
+    
+    def delete_session_vacancies(self, session_id: str):
+        """Delete all vacancies for a given session."""
+        if not session_id:
+            return
+        
+        vacancies = self.db.collection("vacancies").where("session_id", "==", session_id).stream()
+        batch = self.db.batch()
+        count = 0
+        
+        for doc in vacancies:
+            batch.delete(doc.reference)
+            count += 1
+            if count >= 500:
+                batch.commit()
+                batch = self.db.batch()
+                count = 0
+        
+        if count > 0:
+            batch.commit()
+        
+        print(f"Deleted vacancies for session {session_id}")
