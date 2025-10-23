@@ -1,6 +1,7 @@
 import pdfplumber
 from google.cloud import aiplatform
 from google.cloud import firestore
+from google.cloud.firestore_v1.vector import Vector
 from vertexai.language_models import TextEmbeddingModel
 import numpy as np
 from typing import List, Dict
@@ -13,7 +14,7 @@ class IngestionSubsystem:
         self.project_id = project_id
         self.location = location
         aiplatform.init(project=project_id, location=location)
-        self.embedding_model = TextEmbeddingModel.from_pretrained("gemini-embedding-001")
+        self.embedding_model = TextEmbeddingModel.from_pretrained("text-embedding-005") #text-multilingual-embedding-002
         self.db = firestore.Client(project=project_id, database='ragdb')
         
     def extract_text_from_pdf(self, pdf_file) -> str:
@@ -74,12 +75,11 @@ class IngestionSubsystem:
             "embedding_dim": len(resume_embedding)
         }
     
-    def ingest_jobs_batch(self, jobs_data: List[Dict], progress_callback=None) -> List[Dict]:
+    def ingest_jobs_batch(self, jobs_data: List[Dict], session_id: str, progress_callback=None) -> List[Dict]:
         """Process jobs in batches of up to 100 (Firestore limit is 500, but smaller is safer)."""
         BATCH_SIZE = 30
         all_results = []
         
-        # Prepare valid jobs
         valid_jobs = []
         for job in jobs_data:
             if job.get("description") and len(job["description"].strip()) > 0:
@@ -101,12 +101,13 @@ class IngestionSubsystem:
                     firestore_batch = self.db.batch()
                     for job, embedding in zip(batch, embeddings):
                         job_id = str(job["job_id"])
-                        doc_ref = self.db.collection("jobs").document(job_id)
+                        doc_ref = self.db.collection("vacancies").document(job_id)
                         firestore_batch.set(doc_ref, {
                             "job_id": job_id,
                             "description": job["description"],
                             "date": job.get("date"),
-                            "embedding": embedding,
+                            "embedding": Vector(embedding),
+                            "session_id": session_id,
                             "timestamp": firestore.SERVER_TIMESTAMP
                         })
                         
@@ -127,11 +128,9 @@ class IngestionSubsystem:
                     else:
                         raise
             
-            # Progress callback
             if progress_callback:
                 progress_callback(min(i + BATCH_SIZE, total_jobs), total_jobs)
             
-            # Small delay between batches
             if i + BATCH_SIZE < total_jobs:
                 time.sleep(1)
         
